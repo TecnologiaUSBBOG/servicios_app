@@ -60,14 +60,18 @@ class _SimuladorEScreenEState extends State<SimuladorEScreenE> {
   @override
   void initState() {
     super.initState();
+
+    // Inicializa el controlador con el documento global
     _documentoController.text = globalDocumento!;
 
+    // Fetch data usando el documento global
     fetchData(globalDocumento!).then((data) {
       final Map<String, dynamic> info =
           data['info']; // Obtener info del solicitante
       String ciclo = data['ciclo']; // Obtener ciclo
 
       setState(() {
+        // Asignar valores a los controladores
         _nationalIdController.text = info['NATIONAL_ID'] ?? '';
         _vinculacionController.text = info['VINCULACION'] ?? '';
         _nombreController.text = info['NOMBRES'] ?? '';
@@ -82,26 +86,27 @@ class _SimuladorEScreenEState extends State<SimuladorEScreenE> {
         // Llenar el controlador del ciclo
         _cicloController.text = ciclo;
 
-        // Ahora llama a getOpcFinanciacion
+        // Llamar a getOpcFinanciacion para obtener opciones de financiación
         getOpcFinanciacion(globalDocumento!, _vinculacionController.text, ciclo)
             .then((opcFincData) {
           setState(() {
             _opcionFinanciacionList = opcFincData;
-            if (_opcionFinanciacionList.isNotEmpty) {
-              selectedOpcionFinanciacion =
-                  _opcionFinanciacionList[0]['id']; // Asignar el primer ID
-            } else {
-              selectedOpcionFinanciacion = ''; // No hay opciones disponibles
-            }
+            // Asignar el primer ID si hay opciones disponibles
+            selectedOpcionFinanciacion = _opcionFinanciacionList.isNotEmpty
+                ? _opcionFinanciacionList[0]['id']
+                : '';
           });
         }).catchError((error) {
+          // Manejo de errores al obtener opciones de financiación
           setState(() {
             _opcionFinanciacionList = [];
             selectedOpcionFinanciacion = ''; // Resetear si hay error
           });
         });
       });
-    }).catchError((error) {});
+    }).catchError((error) {
+      // Manejo de errores al obtener datos del solicitante
+    });
   }
 
   Widget _buildSectionTitle(String title) {
@@ -382,22 +387,16 @@ Future<List<Map<String, dynamic>>> getOpcFinanciacion(
     },
   );
   if (response.statusCode == 200) {
-    // Limpiar la respuesta para eliminar comas adicionales
-    String cleanedResponse = response.body
-        .replaceAll(RegExp(r',,+'), ','); // Elimina comas duplicadas
-    cleanedResponse = cleanedResponse.replaceAll(
-        RegExp(r',\s*]'), ']'); // Elimina coma antes del cierre del array
-
-    // Decodificar la respuesta JSON como una lista
-    List<dynamic> opcFincDataList = json.decode(cleanedResponse);
+    // Decodificar la respuesta JSON directamente
+    List<dynamic> opcFincDataList = json.decode(response.body);
 
     // Mapea los datos a un formato adecuado
-    return opcFincDataList
-        .map((opc) => {
-              'text': opc['D'].toString(), // Obtener el texto del campo 'D'
-              'id': opc['R'].toString(), // Obtener el valor del campo 'R'
-            })
-        .toList();
+    return opcFincDataList.map((opc) {
+      return {
+        'text': opc['D'].toString(), // Obtener el texto del campo 'D'
+        'id': opc['R'].toString(), // Obtener el valor del campo 'R'
+      };
+    }).toList();
   } else {
     throw Exception(
         'Error al cargar todas las opciones: ${response.statusCode}');
